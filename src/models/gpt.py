@@ -10,13 +10,12 @@ class Config:
     if you wanted to. It's not going to be very good, but it will do something.
     """
     vocab_size = 5
-    n_embed = 32
-    block_size = 8
+    n_embed = 768
+    block_size = 64
     n_head = 4
     head_size = n_embed // n_head
     num_heads = 4
-    n_embed = 32
-    n_layer = 3
+    n_layer = 12
     dropout = 0.1
     head_dropout = 0.1
     multi_head_dropout = 0.1
