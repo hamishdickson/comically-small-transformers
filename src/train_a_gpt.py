@@ -134,6 +134,9 @@ for epoch in range(training_config.epochs):
 print(loss.item())
 
 
+# save the model
+accelerator.save(model.state_dict(), "model.pth")
+
 # now let's generate some text
 
 kickoff = (
