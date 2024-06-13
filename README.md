@@ -9,8 +9,14 @@ I have made no attempt to optimise these models for production or so that you ca
 
 ## Models Implemented
 
-GPT (sort of 2?)
+### GPT (sort of 2?)
 
+This is very much based upon the nanoGPT model. The big changes are in the training code
+
+```shell
+python -m src.train_a_gpt
+```
 
 ## Data
 
+This repo includes the tiny Shakespeare dataset from the nanoGPT repo. You can download it from the nanoGPT repo or use your own data.

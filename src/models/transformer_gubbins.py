@@ -16,8 +16,10 @@ class Block(nn.Module):
         x = x + self.ffwd(self.ln2(x))
         return x
 
+
 class Head(nn.Module):
     """one head of self-attention"""
+
     def __init__(self, n_embed, head_size, block_size, dropout):
         super().__init__()
         self.key = nn.Linear(n_embed, head_size, bias=False)
@@ -26,19 +28,19 @@ class Head(nn.Module):
 
         # this is a buffer, not a parameter - a bit like how batchnorm has running stats that aren't parameters
         # tril is the lower triangular matrix used for the "causal" mask
-        self.register_buffer('tril', torch.tril(torch.ones(block_size, block_size)))
+        self.register_buffer("tril", torch.tril(torch.ones(block_size, block_size)))
 
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, x):
-        B,T,C = x.shape
+        B, T, C = x.shape
         k = self.key(x)
         q = self.query(x)
 
         # compute attention scores ("affinities")
         wei = q @ k.transpose(-2, -1) * C**-0.5
 
-        wei = wei.masked_fill(self.tril[:T, :T] == 0, float('-inf'))
+        wei = wei.masked_fill(self.tril[:T, :T] == 0, float("-inf"))
         wei = F.softmax(wei, dim=-1)
 
         # this one is interesting, stop some nodes from communicating
@@ -46,7 +48,8 @@ class Head(nn.Module):
 
         v = self.value(x)
 
-        return wei @ v # (B,T,T) @ (B,T,C) -> (B,T,C)
+        return wei @ v  # (B,T,T) @ (B,T,C) -> (B,T,C)
+
 
 class MultiHeadAttention(nn.Module):
     def __init__(self, n_embed, head_size, block_size, num_heads, head_dropout, dropout):
@@ -69,10 +72,9 @@ class FeedForward(nn.Module):
         self.net = nn.Sequential(
             nn.Linear(n_embed, n_embed * scale_factor),
             nn.ReLU(),
-            nn.Linear(n_embed * scale_factor, n_embed), # projection
-            nn.Dropout(dropout)
+            nn.Linear(n_embed * scale_factor, n_embed),  # projection
+            nn.Dropout(dropout),
         )
 
     def forward(self, x):
         return self.net(x)
-    

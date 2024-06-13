@@ -1,5 +1,6 @@
 from abc import ABC
 
+
 class CharLevelTokenizer(ABC):
     def __init__(self):
         super().__init__()
@@ -11,14 +12,14 @@ class CharLevelTokenizer(ABC):
     def train(self, text):
         chars = sorted(list(set(text)))
         self.vocab_size = len(chars)
-        print('Number of unique characters: ', self.vocab_size)
+        print("Number of unique characters: ", self.vocab_size)
         print(chars)
 
-        self.stoi = {ch:i for i,ch in enumerate(chars)}
-        self.itos = {i:ch for i,ch in enumerate(chars)}
+        self.stoi = {ch: i for i, ch in enumerate(chars)}
+        self.itos = {i: ch for i, ch in enumerate(chars)}
 
     def encode(self, x):
         return [self.stoi[ch] for ch in x]
-    
+
     def decode(self, x):
-        return ''.join([self.itos[i] for i in x])
+        return "".join([self.itos[i] for i in x])
