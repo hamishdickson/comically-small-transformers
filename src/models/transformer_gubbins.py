@@ -3,10 +3,23 @@ import torch.nn as nn
 from torch.nn import functional as F
 
 
-class Block(nn.Module):
+class EncoderBlock(nn.Module):
     def __init__(self, n_embed, head_size, block_size, num_heads, multi_head_dropout, dropout):
         super().__init__()
-        self.sa = MultiHeadAttention(n_embed, head_size, block_size, num_heads, multi_head_dropout, dropout)
+        self.sa = EncoderMultiHeadAttention(n_embed, head_size, block_size, num_heads, multi_head_dropout, dropout)
+        self.ffwd = FeedForward(n_embed, dropout)
+        self.ln1 = nn.LayerNorm(n_embed)
+        self.ln2 = nn.LayerNorm(n_embed)
+
+    def forward(self, x):
+        x = x + self.sa(self.ln1(x))
+        x = x + self.ffwd(self.ln2(x))
+        return x
+
+class DecoderBlock(nn.Module):
+    def __init__(self, n_embed, head_size, block_size, num_heads, multi_head_dropout, dropout):
+        super().__init__()
+        self.sa = DecoderMultiHeadAttention(n_embed, head_size, block_size, num_heads, multi_head_dropout, dropout)
         self.ffwd = FeedForward(n_embed, dropout)
         self.ln1 = nn.LayerNorm(n_embed)
         self.ln2 = nn.LayerNorm(n_embed)
@@ -17,8 +30,41 @@ class Block(nn.Module):
         return x
 
 
-class Head(nn.Module):
-    """one head of self-attention"""
+class EncoderHead(nn.Module):
+    """one head of encoder self-attention
+    
+    Notice this connects the whole input sequence to itself, so it's not autoregressive
+    """
+
+    def __init__(self, n_embed, head_size, block_size, dropout):
+        super().__init__()
+        self.key = nn.Linear(n_embed, head_size, bias=False)
+        self.query = nn.Linear(n_embed, head_size, bias=False)
+        self.value = nn.Linear(n_embed, head_size, bias=False)
+
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, x):
+        B, T, C = x.shape
+        k = self.key(x)
+        q = self.query(x)
+
+        # compute attention scores ("affinities")
+        wei = q @ k.transpose(-2, -1) * C**-0.5
+
+        # this one is interesting, stop some nodes from communicating
+        wei = self.dropout(wei)
+
+        v = self.value(x)
+
+        return wei @ v  # (B,T,T) @ (B,T,C) -> (B,T,C)
+
+
+class DecoderHead(nn.Module):
+    """one head of decoder self-attention
+    
+    notice the main difference here is the masked tril to get that backwards-only autoregressive property
+    """
 
     def __init__(self, n_embed, head_size, block_size, dropout):
         super().__init__()
@@ -51,10 +97,23 @@ class Head(nn.Module):
         return wei @ v  # (B,T,T) @ (B,T,C) -> (B,T,C)
 
 
-class MultiHeadAttention(nn.Module):
+class EncoderMultiHeadAttention(nn.Module):
     def __init__(self, n_embed, head_size, block_size, num_heads, head_dropout, dropout):
         super().__init__()
-        self.heads = nn.ModuleList([Head(n_embed, head_size, block_size, head_dropout) for _ in range(num_heads)])
+        self.heads = nn.ModuleList([EncoderHead(n_embed, head_size, block_size, head_dropout) for _ in range(num_heads)])
+        self.projection = nn.Linear(n_embed, n_embed)
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, x):
+        out = torch.cat([h(x) for h in self.heads], dim=-1)
+        out = self.dropout(self.projection(out))
+        return out
+
+
+class DecoderMultiHeadAttention(nn.Module):
+    def __init__(self, n_embed, head_size, block_size, num_heads, head_dropout, dropout):
+        super().__init__()
+        self.heads = nn.ModuleList([DecoderHead(n_embed, head_size, block_size, head_dropout) for _ in range(num_heads)])
         self.projection = nn.Linear(n_embed, n_embed)
         self.dropout = nn.Dropout(dropout)
 

@@ -18,18 +18,14 @@ class Config:
     n_head = 4
     head_size = n_embed // n_head
     num_heads = 4
-    n_layer = 3
+    n_layer = 6
     dropout = 0.1
     head_dropout = 0.1
     multi_head_dropout = 0.1
 
 
-class GPT(nn.Module):
-    """A simple GPT model.
-
-    Note, this is very very similar to the decoder in the "Attention is All You Need" paper with
-    the exception of the layer norma ("add & norm" in the paper). This happens before the ff layers
-    instead of after in the paper. This is now a common variation in transformer models.
+class BERT(nn.Module):
+    """A simple BERT model.
     """
 
     def __init__(self, config):
@@ -41,7 +37,7 @@ class GPT(nn.Module):
 
         self.blocks = nn.Sequential(
             *[
-                transformer_gubbins.DecoderBlock(
+                transformer_gubbins.EncoderBlock(
                     config.n_embed,
                     config.head_size,
                     config.block_size,
@@ -66,11 +62,12 @@ class GPT(nn.Module):
         elif isinstance(module, nn.Embedding):
             torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
 
-    def forward(self, idx, targets=None):
-        B, T = idx.shape
+    def forward(self, inputs, targets=None):
+        # print(inputs.shape)
+        B, T = inputs.shape
 
         # idx and targets are both (B,T) tensor of integers
-        tok_emb = self.token_embedding_table(idx)  # (B,T,C)
+        tok_emb = self.token_embedding_table(inputs)  # (B,T,C)
 
         # Use the device of the token_embedding_table
         device = self.token_embedding_table.weight.device
@@ -90,15 +87,4 @@ class GPT(nn.Module):
 
         return logits, loss
 
-    def generate(self, idx, max_new_tokens):
-        for _ in range(max_new_tokens):
-            # crop idx to the last block_size tokens
-            idx_cond = idx[:, -self.config.block_size :]
-            logits, loss = self(idx_cond)
-            logits = logits[:, -1, :]
 
-            probs = F.softmax(logits, dim=-1)
-            idx_next = torch.multinomial(probs, num_samples=1)
-            idx = torch.cat((idx, idx_next), dim=1)
-
-        return idx

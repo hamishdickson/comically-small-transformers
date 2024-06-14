@@ -24,7 +24,7 @@ class TRAININGCONFIG:
 
 training_config = TRAININGCONFIG()
 
-# with open("data/gpt_data.txt", "r", encoding="utf-8") as file:
+# with open("data/tiny_shakespeare.txt", "r", encoding="utf-8") as file:
 #     text = file.read()
 
 tokenizer = transformers.GPT2TokenizerFast.from_pretrained("gpt2")
